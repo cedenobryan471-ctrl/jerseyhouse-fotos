@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   photos:
+    if: github.repository == 'cedenobryan471-ctrl/jerseyhouse-fotos'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: github-pages
@@ -23,7 +24,7 @@ jobs:
           python3 - <<'PY'
           import tarfile,re
           with tarfile.open('/tmp/photos.tar.gz') as archive:
-              if any(not (m.name=='images' and m.isdir() or re.fullmatch(r'images/\d+-[1-3]\.webp',m.name) and m.isfile()) for m in archive.getmembers()):raise ValueError('Invalid photo package')
+              if any(not (m.name=='images' and m.isdir() or re.fullmatch(r'images/\d+-[1-7]\.webp',m.name) and m.isfile()) for m in archive.getmembers()):raise ValueError('Invalid photo package')
               if sum(m.size for m in archive.getmembers())>=1_000_000_000:raise ValueError('Photo package too large')
               archive.extractall('.',filter='data')
           PY
