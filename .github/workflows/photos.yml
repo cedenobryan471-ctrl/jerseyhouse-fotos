@@ -1,0 +1,39 @@
+name: Actualizar fotos de galería
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 * * * *'
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: gallery-photos
+  cancel-in-progress: false
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar solo fotos sanitizadas
+        run: |
+          curl --fail --location --retry 2 'https://github.com/cedenobryan471-ctrl/jerseyhouse-catalogo/releases/download/gallery-photos/gallery-extra.tar.gz' -o /tmp/photos.tar.gz
+          python3 - <<'PY'
+          import tarfile,re
+          with tarfile.open('/tmp/photos.tar.gz') as archive:
+              if any(not (m.name=='images' and m.isdir() or re.fullmatch(r'images/\d+-[1-3]\.webp',m.name) and m.isfile()) for m in archive.getmembers()):raise ValueError('Invalid photo package')
+              if sum(m.size for m in archive.getmembers())>=1_000_000_000:raise ValueError('Photo package too large')
+              archive.extractall('.',filter='data')
+          PY
+          git config user.name catalog-bot
+          git config user.email catalog-bot@users.noreply.github.com
+          git add images
+          git diff --cached --quiet || (git commit -m 'Actualizar fotos WebP de galería' && git push)
+      - uses: actions/configure-pages@v5
+      - run: mkdir -p _site && cp -r images _site/ && touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
